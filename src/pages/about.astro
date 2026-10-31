@@ -1,0 +1,60 @@
+---
+// 关于页（PRD F5）：个人简介终稿 + 方向 + 联系方式 + 本站说明
+import { SITE } from '../config';
+import BaseLayout from '../layouts/Base.astro';
+---
+
+<BaseLayout title="关于" description={`${SITE.author} 的个人简介与联系方式`}>
+  <article class="about fade-up">
+    <h1>你好，我是 <span class="accent">Lian ZhiWei（LZW）</span></h1>
+
+    <p>
+      这里的文字，是我个人学习和工作中遇到的、值得分享的内容——有生物信息分析的实战笔记，体外诊断（IVD）研发一线的观察，也有
+      AI 时代的一些思考：当智能体开始渗透科研与研发流程，一个工程师该如何重新组织自己的工作与学习。
+    </p>
+    <p>我相信写作是最好的复盘。如果你也在这些方向上摸索，欢迎评论留言或邮件交流。</p>
+
+    <h2>我在关注什么</h2>
+    <ul>
+      <li><strong>生物信息分析</strong> —— 单细胞与空间转录组测序的分析方法与避坑实践</li>
+      <li><strong>IVD 体外诊断研发</strong> —— 免疫检测、原料研发一线的观察与思考</li>
+      <li><strong>AI 应用与思考</strong> —— 智能体、自动化工作流如何改变研发和学习方式</li>
+    </ul>
+
+    <h2>联系我</h2>
+    <ul>
+      <li>📧 邮箱：<a href={`mailto:${SITE.email}`}>{SITE.email}</a></li>
+      <li>🐙 GitHub：<a href={SITE.github} target="_blank" rel="noopener">zwl8620</a></li>
+      <li>💬 评论区：任意文章底部留言（需 GitHub 登录）</li>
+    </ul>
+
+    <h2>关于这个博客</h2>
+    <p>
+      本站基于 <a href="https://astro.build" target="_blank" rel="noopener">Astro</a>
+      静态生成，托管于 GitHub Pages，零服务器成本；文章数据与图片存于 GitHub
+      仓库，全部变更可追溯、可回滚。建站过程记录在<a href="/tech_blog/posts/hello-world/">《个人博客搭建记》</a>中。
+    </p>
+  </article>
+</BaseLayout>
+
+<style>
+  .about {
+    max-width: 640px;
+  }
+  .about h1 {
+    font-size: 1.7rem;
+    margin-bottom: 20px;
+  }
+  .accent {
+    color: var(--accent);
+  }
+  .about h2 {
+    font-size: 1.15rem;
+    margin-top: 2em;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border);
+  }
+  .about li {
+    margin: 8px 0;
+  }
+</style>

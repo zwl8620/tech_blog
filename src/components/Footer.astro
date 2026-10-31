@@ -1,0 +1,65 @@
+---
+// 页脚（PRD F1）：导航重复 + GitHub + 邮箱 + RSS + 版权
+import { SITE } from '../config';
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <nav class="footer-nav" aria-label="页脚导航">
+      <a href="/tech_blog/">首页</a>
+      <a href="/tech_blog/posts/">文章</a>
+      <a href="/tech_blog/collections/">合集</a>
+      <a href="/tech_blog/tags/">标签</a>
+      <a href="/tech_blog/about/">关于</a>
+      <a href="/tech_blog/rss.xml">RSS</a>
+    </nav>
+    <div class="footer-meta">
+      <span>© {year} {SITE.author} · 知识共享</span>
+      <span class="dot">·</span>
+      <a href={SITE.github} target="_blank" rel="noopener">GitHub</a>
+      <span class="dot">·</span>
+      <a href="/tech_blog/about/">关于</a>
+    </div>
+    <p class="footer-tagline">{SITE.tagline}</p>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--border);
+    padding: 36px 0 44px;
+    margin-top: 40px;
+  }
+  .footer-inner {
+    text-align: center;
+  }
+  .footer-nav {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 4px 22px;
+    margin-bottom: 16px;
+  }
+  .footer-nav a {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+  }
+  .footer-nav a:hover {
+    color: var(--accent);
+  }
+  .footer-meta {
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+  }
+  .footer-meta .dot {
+    margin: 0 6px;
+  }
+  .footer-tagline {
+    margin-top: 10px;
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+    letter-spacing: 0.35em;
+    font-family: var(--font-serif);
+  }
+</style>

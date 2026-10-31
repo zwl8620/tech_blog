@@ -1,0 +1,122 @@
+---
+// 合集详情（PRD F17）：成员文章按 seriesOrder 排列，不分页
+import { getCollections, getPublishedPosts } from '../../utils/content';
+import { formatDate, readingTime } from '../../utils/slug';
+import BaseLayout from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  const collections = await getCollections();
+  return collections.map((c) => ({ params: { slug: c.slug }, props: { collection: c } }));
+}
+
+const { collection } = Astro.props;
+const all = await getPublishedPosts();
+---
+
+<BaseLayout title={collection.name} description={collection.description}>
+  <header class="collection-head fade-up">
+    <p class="crumb"><a href="/tech_blog/collections/">← 合集书架</a></p>
+    <h1 class="collection-title">{collection.name}</h1>
+    <p class="collection-desc">{collection.description}</p>
+    <p class="collection-meta">
+      {
+        collection.postCount > 0 ? (
+          `${collection.postCount} 篇 · 持续更新`
+        ) : (
+          <span class="pending">待更新 —— 这个合集还没有文章</span>
+        )
+      }
+    </p>
+  </header>
+
+  {
+    collection.posts.length > 0 && (
+      <ol class="member-list fade-up">
+        {collection.posts.map((p, i) => (
+          <li class:list={['member', { current: p.id === Astro.params.slug }]}>
+            <span class="member-order">{i + 1}</span>
+            <div class="member-body">
+              <a href={`/tech_blog/posts/${p.id}/`} class="member-title">{p.data.title}</a>
+              <span class="member-meta">
+                {formatDate(p.data.date)} · {readingTime(p.body ?? '')}
+              </span>
+              <p class="member-desc">{p.data.description}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .crumb {
+    font-size: 0.82rem;
+    margin: 0 0 18px;
+  }
+  .collection-title {
+    margin: 0 0 8px;
+    font-size: 1.8rem;
+  }
+  .collection-desc {
+    color: var(--text-secondary);
+    margin: 0 0 8px;
+  }
+  .collection-meta {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+  }
+  .pending {
+    color: var(--accent);
+  }
+  .member-list {
+    list-style: none;
+    margin: 32px 0 0;
+    padding: 0;
+  }
+  .member {
+    display: flex;
+    gap: 18px;
+    padding: 18px 12px;
+    border-bottom: 1px solid var(--border);
+    border-radius: var(--radius);
+    transition: background 0.15s;
+  }
+  .member:hover {
+    background: var(--bg-card);
+  }
+  .member.current {
+    background: var(--accent-soft);
+  }
+  .member-order {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--accent);
+    min-width: 28px;
+    text-align: center;
+    padding-top: 2px;
+  }
+  .member-body {
+    min-width: 0;
+  }
+  .member-title {
+    font-size: 1.02rem;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .member-title:hover {
+    color: var(--accent);
+  }
+  .member-meta {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin: 3px 0 6px;
+  }
+  .member-desc {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+</style>

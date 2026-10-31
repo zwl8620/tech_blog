@@ -1,0 +1,50 @@
+---
+// 单标签页（PRD F4）：URL 用 ASCII slug，页面显示中文标签；不分页
+import { getTagMap } from '../../utils/content';
+import { toAsciiSlug } from '../../utils/slug';
+import BaseLayout from '../../layouts/Base.astro';
+import PostRow from '../../components/PostRow.astro';
+
+export async function getStaticPaths() {
+  const tagMap = await getTagMap();
+  return [...tagMap.entries()].map(([tag, posts]) => ({
+    params: { tag: toAsciiSlug(tag) },
+    props: { tag, posts },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+---
+
+<BaseLayout title={`标签：${tag}`} description={`标签「${tag}」下的全部文章`}>
+  <h1 class="page-title fade-up">#{tag}</h1>
+  <p class="page-desc fade-up">{posts.length} 篇文章</p>
+
+  <div class="post-list fade-up">
+    {posts.map((p) => <PostRow post={p} pinned={p.data.pinned} />)}
+  </div>
+
+  <p class="back fade-up"><a href="/tech_blog/tags/">← 全部标签</a></p>
+</BaseLayout>
+
+<style>
+  .page-title {
+    margin-bottom: 4px;
+  }
+  .page-desc {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    margin-top: 0;
+  }
+  .post-list {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 16px;
+    margin-top: 18px;
+  }
+  .back {
+    margin-top: 24px;
+    font-size: 0.85rem;
+  }
+</style>

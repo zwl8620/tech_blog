@@ -1,0 +1,161 @@
+---
+// 详情页尾部导航（PRD B2 互斥规则）：合集导航盒 / 全局前后篇
+import type { CollectionEntry } from 'astro:content';
+import { formatDate } from '../utils/slug';
+
+interface Props {
+  nav: {
+    type: 'series' | 'global';
+    seriesName: string | null;
+    seriesSlug: string | null;
+    prev: CollectionEntry<'posts'> | null;
+    next: CollectionEntry<'posts'> | null;
+    index: number;
+    total: number;
+  };
+}
+const { nav } = Astro.props;
+
+const link = (p: CollectionEntry<'posts'>) => `/tech_blog/posts/${p.id}/`;
+---
+
+{
+  nav.type === 'series' ? (
+    <aside class="series-box fade-up">
+      <p class="series-box-label">
+        📚 合集《{nav.seriesName}》 · 第 {nav.index} / {nav.total} 篇
+      </p>
+      <div class="series-box-links">
+        {nav.prev ? (
+          <a href={link(nav.prev)} class="nav-card">
+            <span class="nav-card-label">← 上一篇</span>
+            <span class="nav-card-title">{nav.prev.data.title}</span>
+          </a>
+        ) : (
+          <span class="nav-card is-disabled">
+            <span class="nav-card-label">← 上一篇</span>
+            <span class="nav-card-title">已是第一篇</span>
+          </span>
+        )}
+        {nav.next ? (
+          <a href={link(nav.next)} class="nav-card is-next">
+            <span class="nav-card-label">下一篇 →</span>
+            <span class="nav-card-title">{nav.next.data.title}</span>
+          </a>
+        ) : (
+          <span class="nav-card is-disabled is-next">
+            <span class="nav-card-label">下一篇 →</span>
+            <span class="nav-card-title">已是最后一篇</span>
+          </span>
+        )}
+      </div>
+      <a href={`/tech_blog/collections/${nav.seriesSlug}/`} class="series-box-back">
+        返回合集目录 ↩
+      </a>
+    </aside>
+  ) : (
+    <nav class="global-nav fade-up" aria-label="文章导航">
+      {nav.prev ? (
+        <a href={link(nav.prev)} class="nav-card">
+          <span class="nav-card-label">← 上一篇</span>
+          <span class="nav-card-title">{nav.prev.data.title}</span>
+          <span class="nav-card-date">{formatDate(nav.prev.data.date)}</span>
+        </a>
+      ) : (
+        <span class="nav-card is-disabled">
+          <span class="nav-card-label">← 上一篇</span>
+          <span class="nav-card-title">没有更早的文章了</span>
+        </span>
+      )}
+      {nav.next ? (
+        <a href={link(nav.next)} class="nav-card is-next">
+          <span class="nav-card-label">下一篇 →</span>
+          <span class="nav-card-title">{nav.next.data.title}</span>
+          <span class="nav-card-date">{formatDate(nav.next.data.date)}</span>
+        </a>
+      ) : (
+        <span class="nav-card is-disabled is-next">
+          <span class="nav-card-label">下一篇 →</span>
+          <span class="nav-card-title">没有更新的文章了</span>
+        </span>
+      )}
+    </nav>
+  )
+}
+
+<style>
+  .series-box {
+    margin-top: 56px;
+    padding: 20px 24px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .series-box-label {
+    margin: 0 0 14px;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  .series-box-links {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .nav-card {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: inherit;
+    transition: border-color 0.15s;
+    min-width: 0;
+  }
+  a.nav-card:hover {
+    border-color: var(--accent);
+  }
+  .nav-card.is-next {
+    text-align: right;
+  }
+  .nav-card.is-disabled {
+    opacity: 0.5;
+  }
+  .nav-card-label {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+  }
+  .nav-card-title {
+    font-size: 0.88rem;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .nav-card-date {
+    font-size: 0.7rem;
+    color: var(--text-tertiary);
+  }
+  .series-box-back {
+    display: inline-block;
+    margin-top: 14px;
+    font-size: 0.82rem;
+    color: var(--accent);
+  }
+  .global-nav {
+    margin-top: 56px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  @media (max-width: 600px) {
+    .series-box-links,
+    .global-nav {
+      grid-template-columns: 1fr;
+    }
+    .nav-card.is-next {
+      text-align: left;
+    }
+  }
+</style>

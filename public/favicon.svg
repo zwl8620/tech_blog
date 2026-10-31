@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <rect x="2" y="2" width="44" height="44" rx="7" fill="#b03a2e"/>
+  <rect x="5.5" y="5.5" width="37" height="37" rx="5" fill="none" stroke="#faf8f3" stroke-width="1.6" opacity="0.85"/>
+  <text x="24" y="25" text-anchor="middle" dominant-baseline="central" font-family="Georgia, 'Songti SC', serif" font-size="15" font-weight="700" fill="#faf8f3" letter-spacing="1">LZW</text>
+</svg>

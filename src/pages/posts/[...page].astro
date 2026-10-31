@@ -1,0 +1,65 @@
+---
+// 文章列表（PRD F2）：置顶浮顶 + 日期倒序 + 每页 10 篇分页
+import { getPublishedPosts, sortWithPinnedFirst } from '../../utils/content';
+import BaseLayout from '../../layouts/Base.astro';
+import PostRow from '../../components/PostRow.astro';
+
+export async function getStaticPaths({ paginate }: import('astro').APIContext) {
+  const posts = await getPublishedPosts();
+  const sorted = sortWithPinnedFirst(posts);
+  return paginate(sorted, { pageSize: 10 });
+}
+
+const { page } = Astro.props;
+---
+
+<BaseLayout title="文章" description="全部文章列表">
+  <h1 class="page-title fade-up">文章</h1>
+  <p class="page-desc fade-up">共 {page.total} 篇 · 第 {page.currentPage} / {page.lastPage} 页</p>
+
+  <div class="post-list fade-up">
+    {page.data.map((p) => <PostRow post={p} pinned={p.data.pinned} />)}
+  </div>
+
+  {
+    page.lastPage > 1 && (
+      <nav class="pager" aria-label="分页">
+        {page.url.prev && <a href={page.url.prev}>← 上一页</a>}
+        <span class="pager-current">
+          {page.currentPage} / {page.lastPage}
+        </span>
+        {page.url.next && <a href={page.url.next}>下一页 →</a>}
+      </nav>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .page-title {
+    margin-bottom: 4px;
+  }
+  .page-desc {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    margin-top: 0;
+  }
+  .post-list {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 4px 16px;
+    margin-top: 18px;
+  }
+  .pager {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+    margin-top: 28px;
+    font-size: 0.88rem;
+  }
+  .pager-current {
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+</style>

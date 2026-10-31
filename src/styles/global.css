@@ -1,0 +1,192 @@
+/* ============================================
+   LZW · 纸墨双主题全局样式（PRD §5.2）
+   浅色 = 纸（米白纸面/墨色文字/朱砂强调）
+   深色 = 墨（墨底/浅字）
+   ============================================ */
+
+:root {
+  /* 浅色主题（纸） */
+  --bg: #faf8f3;
+  --bg-card: #ffffff;
+  --bg-code: #f4f1e8;
+  --text: #2b2a26;
+  --text-secondary: #6b6860;
+  --text-tertiary: #9b978c;
+  --border: #e5e1d6;
+  --accent: #b03a2e;        /* 朱砂 */
+  --accent-soft: #f7e9e6;
+  --link: #8a4b3c;
+  --shadow: rgba(43, 42, 38, 0.06);
+
+  /* 布局 */
+  --max-width: 760px;
+  --header-height: 64px;
+  --radius: 10px;
+
+  /* 字体：仅托管拉丁子集，中文走系统栈（性能要求 §4） */
+  --font-sans: 'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Noto Sans SC', sans-serif;
+  --font-serif: 'Noto Serif SC', 'Songti SC', 'SimSun', serif;
+  --font-mono: 'JetBrains Mono', 'Cascadia Code', Consolas, monospace;
+}
+
+[data-theme='dark'] {
+  /* 深色主题（墨） */
+  --bg: #1d1c1a;
+  --bg-card: #262522;
+  --bg-code: #2e2c29;
+  --text: #e8e5dd;
+  --text-secondary: #a8a49a;
+  --text-tertiary: #75726a;
+  --border: #3a3833;
+  --accent: #d46a5c;
+  --accent-soft: #3a2b28;
+  --link: #d4937f;
+  --shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- 基础 ---------- */
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: 17px;
+  line-height: 1.8;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.25s ease, color 0.25s ease;
+}
+
+a {
+  color: var(--link);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+a:hover {
+  color: var(--accent);
+}
+
+img {
+  max-width: 100%;
+  border-radius: var(--radius);
+}
+
+/* ---------- 版面 ---------- */
+.container {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+main {
+  min-height: calc(100vh - var(--header-height) - 200px);
+  padding-top: 40px;
+  padding-bottom: 80px;
+}
+
+h1, h2, h3, h4 {
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text);
+}
+
+h1 { font-size: 1.9rem; }
+h2 { font-size: 1.45rem; margin-top: 2.2em; }
+h3 { font-size: 1.18rem; margin-top: 1.8em; }
+
+/* 跳到正文锚点（无障碍 §4） */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--accent);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 0 0 var(--radius) 0;
+  z-index: 100;
+}
+.skip-link:focus {
+  left: 0;
+}
+
+/* ---------- 通用组件 ---------- */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  border: 1px solid transparent;
+}
+
+.badge-outline {
+  background: transparent;
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+
+/* ---------- 动效（尊重 prefers-reduced-motion §4） ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .fade-up {
+    animation: fadeUp 0.5s ease both;
+  }
+  @keyframes fadeUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ---------- 主题切换圆形扩散（View Transitions，PRD F7） ---------- */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-new(root) {
+  z-index: 1;
+}
+
+/* ---------- 代码块（Shiki 双主题） ---------- */
+.astro-code {
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  font-size: 0.875rem;
+  border: 1px solid var(--border);
+}
+
+/* ---------- 打印 ---------- */
+@media print {
+  .site-header, .site-footer, .theme-toggle, .search-trigger {
+    display: none !important;
+  }
+}

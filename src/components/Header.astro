@@ -1,0 +1,260 @@
+---
+// 顶栏（PRD §5.1 唯一权威定义）：首页/文章/合集/标签/关于 + 主题切换 + ⌘K
+import { SITE } from '../config';
+import Seal from './Seal.astro';
+
+const navItems = [
+  { href: '/tech_blog/', label: '首页' },
+  { href: '/tech_blog/posts/', label: '文章' },
+  { href: '/tech_blog/collections/', label: '合集' },
+  { href: '/tech_blog/tags/', label: '标签' },
+  { href: '/tech_blog/about/', label: '关于' },
+];
+
+const currentPath = Astro.url.pathname;
+
+// 判断导航项是否激活（文章详情页归属"文章"等）
+const isActive = (href: string) => {
+  if (href === '/tech_blog/') return currentPath === '/tech_blog/' || currentPath === '/tech_blog';
+  return currentPath.startsWith(href);
+};
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="/tech_blog/" class="brand" aria-label={SITE.title}>
+      <Seal size={36} />
+      <span class="brand-text">{SITE.title}</span>
+    </a>
+
+    <nav class="nav" aria-label="主导航">
+      {
+        navItems.map((item) => (
+          <a href={item.href} class:list={['nav-link', { active: isActive(item.href) }]}>
+            {item.label}
+          </a>
+        ))
+      }
+    </nav>
+
+    <div class="header-actions">
+      <button class="search-trigger" id="search-trigger" aria-label="搜索（Ctrl+K）">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="11" cy="11" r="7" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
+        <span class="search-hint">⌘K</span>
+      </button>
+
+      <button class="theme-toggle" id="theme-toggle" aria-label="切换主题">
+        <svg class="icon-sun" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+        <svg class="icon-moon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+      </button>
+
+      <button class="menu-toggle" id="menu-toggle" aria-label="菜单" aria-expanded="false">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M3 6h18M3 12h18M3 18h18" />
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- 移动端抽屉菜单 -->
+  <nav class="mobile-nav" id="mobile-nav" aria-label="移动端导航">
+    {
+      navItems.map((item) => (
+        <a href={item.href} class:list={['mobile-link', { active: isActive(item.href) }]}>
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    height: var(--header-height);
+    background: color-mix(in srgb, var(--bg) 88%, transparent);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+  .header-inner {
+    max-width: 1080px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    gap: 28px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text);
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .brand-text {
+    font-size: 0.95rem;
+    white-space: nowrap;
+  }
+  .nav {
+    display: flex;
+    gap: 4px;
+    flex: 1;
+  }
+  .nav-link {
+    padding: 6px 14px;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    transition: color 0.15s, background 0.15s;
+  }
+  .nav-link:hover {
+    color: var(--text);
+    background: var(--bg-card);
+  }
+  .nav-link.active {
+    color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-left: auto;
+  }
+  .header-actions button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    font-family: var(--font-sans);
+  }
+  .header-actions button:hover {
+    color: var(--accent);
+    border-color: var(--accent);
+  }
+  .search-hint {
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+  }
+  /* 主题图标切换 */
+  [data-theme='light'] .icon-moon { display: none; }
+  [data-theme='dark'] .icon-sun { display: none; }
+
+  /* 汉堡按钮：桌面端隐藏。
+     注意必须用 .header-actions .menu-toggle（0-2-0）压过 .header-actions button 的
+     display:flex（0-1-1），否则桌面端按钮会漏显示且点击无效果（菜单规则仅在移动端媒体查询内）。 */
+  .header-actions .menu-toggle {
+    display: none;
+  }
+
+  .mobile-nav {
+    display: none;
+    position: relative;
+    z-index: 60;
+  }
+
+  @media (max-width: 768px) {
+    .nav { display: none; }
+    .search-hint { display: none; }
+    .header-actions .menu-toggle { display: flex; }
+    .brand-text { font-size: 0.88rem; }
+
+    .mobile-nav {
+      display: none;
+      flex-direction: column;
+      padding: 8px 20px 16px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .mobile-nav.open { display: flex; }
+    .mobile-link {
+      padding: 10px 12px;
+      border-radius: 8px;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+    }
+    .mobile-link.active {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+  }
+</style>
+
+<script>
+  // 主题切换：View Transitions 圆形扩散（PRD F7）
+  const toggle = document.getElementById('theme-toggle');
+  toggle?.addEventListener('click', (e) => {
+    const current = document.documentElement.dataset.theme;
+    const next = current === 'dark' ? 'light' : 'dark';
+    const apply = () => {
+      document.documentElement.dataset.theme = next;
+      localStorage.setItem('theme', next);
+    };
+    if (document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      const x = e instanceof MouseEvent ? e.clientX : innerWidth / 2;
+      const y = e instanceof MouseEvent ? e.clientY : innerHeight / 2;
+      const radius = Math.hypot(Math.max(x, innerWidth - x), Math.max(y, innerHeight - y));
+      const vt = document.startViewTransition(apply);
+      vt.ready.then(() => {
+        document.documentElement.animate(
+          { clipPath: [`circle(0px at ${x}px ${y}px)`, `circle(${radius}px at ${x}px ${y}px)`] },
+          {
+            duration: 450,
+            easing: 'ease-in-out',
+            pseudoElement: '::view-transition-new(root)',
+          }
+        );
+      });
+    } else {
+      apply();
+    }
+  });
+
+  // 移动端菜单（防御性写法：事件委托 + 点击时实时查询元素，避免脚本加载顺序导致的静默失败）
+  function bindMenuToggle() {
+    const btn = document.getElementById('menu-toggle');
+    const nav = document.getElementById('mobile-nav');
+    if (!btn || !nav) return;
+
+    const setAria = () => {
+      btn.setAttribute('aria-expanded', nav.classList.contains('open') ? 'true' : 'false');
+    };
+
+    btn.addEventListener('click', () => {
+      nav.classList.toggle('open');
+      setAria();
+    });
+
+    // 点击菜单里的链接后自动收起（跳转前视觉更干净）
+    nav.addEventListener('click', (e) => {
+      if ((e.target as HTMLElement).closest('a')) {
+        nav.classList.remove('open');
+        setAria();
+      }
+    });
+  }
+  bindMenuToggle();
+
+  // 兜底：万一脚本在 DOM 未就绪时执行，DOM ready 后再补绑一次（重复绑定前检查防抖）
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindMenuToggle, { once: true });
+  }
+</script>

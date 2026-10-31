@@ -1,0 +1,721 @@
+---
+// 写作后台（PRD F10~F13/F18）：唯一写入口，PAT 门禁
+// 路径构建时注入：默认 console-lzw（astro.config.mjs CONSOLE_SECRET）
+import BaseLayout from '../../layouts/Base.astro';
+---
+
+<BaseLayout title="Console" noindex>
+  <!-- 阶段一：令牌门禁 -->
+  <section id="gate" class="gate">
+    <div class="gate-card card">
+      <h1>🔒 访问控制</h1>
+      <p class="gate-desc">请输入 GitHub 访问令牌（Fine-grained PAT，仅授权本仓库 Contents 读写）。</p>
+      <input
+        type="password"
+        id="token-input"
+        placeholder="github_pat_… 或 ghp_…"
+        autocomplete="off"
+      />
+      <button id="token-submit" class="btn btn-primary">解锁后台</button>
+      <p class="gate-error" id="gate-error" hidden></p>
+      <details class="gate-help">
+        <summary>如何创建令牌？</summary>
+        <ol>
+          <li>GitHub → Settings → Developer settings → Fine-grained tokens → Generate new token</li>
+          <li>Repository access 选 <strong>Only select repositories</strong> → 选 zwl8620/tech_blog</li>
+          <li>Permissions → Repository permissions → Contents 设为 <strong>Read and write</strong></li>
+          <li>有效期建议 90 天；生成后粘贴到上方输入框</li>
+        </ol>
+      </details>
+    </div>
+  </section>
+
+  <!-- 阶段二：后台主体（验证通过后显示） -->
+  <section id="console" hidden>
+    <header class="console-head">
+      <h1>写作后台</h1>
+      <div class="console-head-meta">
+        <span id="login-user"></span>
+        <a href="/tech_blog/" target="_blank" rel="noopener">查看站点 ↗</a>
+        <button id="logout" class="btn btn-sm">退出</button>
+      </div>
+    </header>
+
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="posts" role="tab">文章管理</button>
+      <button class="tab" data-tab="editor" role="tab">编辑器</button>
+      <button class="tab" data-tab="collections" role="tab">合集管理</button>
+    </nav>
+
+    <!-- Tab 1：文章管理（F11） -->
+    <div id="tab-posts" class="tab-panel">
+      <div class="toolbar-row">
+        <input type="search" id="post-search" placeholder="搜索标题…" class="input" />
+        <button id="new-post" class="btn btn-primary">＋ 新建文章</button>
+      </div>
+      <div id="post-list" class="post-admin-list"><p class="muted">加载中…</p></div>
+    </div>
+
+    <!-- Tab 2：编辑器（F12/F13） -->
+    <div id="tab-editor" class="tab-panel" hidden>
+      <div class="editor-fields">
+        <label>标题 <input id="f-title" class="input" placeholder="文章标题" /></label>
+        <label>slug（发布后锁定）
+          <input id="f-slug" class="input" placeholder="ascii-slug（留空按标题自动生成）" />
+        </label>
+        <label>摘要 description
+          <input id="f-desc" class="input" placeholder="一句话摘要（列表/搜索/分享卡片用）" />
+        </label>
+        <div class="field-row">
+          <label>日期 <input id="f-date" type="date" class="input" /></label>
+          <label>合集
+            <select id="f-series" class="input"><option value="">（不属于合集）</option></select>
+          </label>
+          <label>卷内序号 <input id="f-series-order" type="number" min="1" class="input" style="width:90px" /></label>
+        </div>
+        <label>标签（回车添加）
+          <input id="f-tags" class="input" placeholder="例：生信, 随笔" list="tags-datalist" />
+          <datalist id="tags-datalist"></datalist>
+        </label>
+        <div class="field-checks">
+          <label><input type="checkbox" id="f-pinned" /> 置顶</label>
+          <label><input type="checkbox" id="f-draft" /> 草稿（不上线）</label>
+        </div>
+      </div>
+
+      <div class="editor-toolbar" id="editor-toolbar">
+        <button data-md="h2">H2</button>
+        <button data-md="h3">H3</button>
+        <button data-md="bold">B</button>
+        <button data-md="italic">I</button>
+        <button data-md="quote">引用</button>
+        <button data-md="code">代码</button>
+        <button data-md="table">表格</button>
+        <button data-md="link">链接</button>
+        <button data-md="image">🖼 图片</button>
+        <button data-md="attach">📎 附件</button>
+        <button data-md="footnote">脚注</button>
+        <span class="toolbar-spring"></span>
+        <label class="upload-inline">
+          <input type="file" id="file-picker" multiple hidden />
+          <span class="btn btn-sm">选择文件</span>
+        </label>
+      </div>
+
+      <div class="editor-split">
+        <textarea id="f-body" spellcheck="false" placeholder="正文 Markdown…（支持拖拽 / 粘贴图片）"></textarea>
+        <div id="f-preview" class="preview"></div>
+      </div>
+
+      <div class="editor-actions">
+        <p class="muted" id="autosave-hint">30 秒自动暂存已启用</p>
+        <span class="toolbar-spring"></span>
+        <button id="editor-cancel" class="btn btn-sm">取消</button>
+        <button id="editor-save" class="btn btn-primary">保存并提交</button>
+      </div>
+      <p class="gate-error" id="editor-error" hidden></p>
+      <input type="file" id="hidden-picker-image" accept="image/*" hidden />
+      <input type="file" id="hidden-picker-file" hidden />
+    </div>
+
+    <!-- Tab 3：合集管理（F18） -->
+    <div id="tab-collections" class="tab-panel" hidden>
+      <div class="toolbar-row">
+        <p class="muted">合集元数据存于 src/data/collections.json；改名将自动同步成员文章 frontmatter。</p>
+        <button id="new-collection" class="btn btn-primary">＋ 新建合集</button>
+      </div>
+      <div id="collection-list"><p class="muted">加载中…</p></div>
+    </div>
+  </section>
+
+  <!-- 全局提示与确认对话框 -->
+  <div id="toast" class="toast" hidden></div>
+  <dialog id="confirm-dialog">
+    <p id="confirm-text"></p>
+    <div class="dialog-actions">
+      <button id="confirm-cancel" class="btn btn-sm">取消</button>
+      <button id="confirm-ok" class="btn btn-danger">确认</button>
+    </div>
+  </dialog>
+</BaseLayout>
+
+<style>
+  .gate { display: flex; justify-content: center; padding: 60px 0; }
+  .gate-card { max-width: 460px; width: 100%; text-align: center; padding: 36px; }
+  .gate-card h1 { font-size: 1.3rem; margin-bottom: 10px; }
+  .gate-desc { font-size: 0.88rem; color: var(--text-secondary); }
+  #token-input {
+    width: 100%; padding: 11px 14px; margin: 8px 0 14px;
+    border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg); color: var(--text); font-family: var(--font-mono); font-size: 0.85rem;
+  }
+  .gate-help { text-align: left; margin-top: 18px; font-size: 0.8rem; color: var(--text-secondary); }
+  .gate-help summary { cursor: pointer; color: var(--text-tertiary); }
+  .gate-help ol { padding-left: 18px; }
+  .gate-error { color: #c0392b; font-size: 0.85rem; margin-top: 12px; }
+
+  .console-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .console-head h1 { font-size: 1.4rem; margin: 0; }
+  .console-head-meta { display: flex; gap: 14px; align-items: center; font-size: 0.82rem; color: var(--text-secondary); }
+  .tabs { display: flex; gap: 4px; margin: 22px 0; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 9px 18px; border: none; background: none; cursor: pointer;
+    font-size: 0.92rem; color: var(--text-secondary); border-bottom: 2px solid transparent;
+    font-family: var(--font-sans);
+  }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-panel { min-height: 300px; }
+
+  .toolbar-row { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar-row .muted { margin: 0; flex: 1; min-width: 200px; }
+  .input {
+    padding: 9px 12px; border: 1px solid var(--border); border-radius: 8px;
+    background: var(--bg-card); color: var(--text); font-family: var(--font-sans); font-size: 0.9rem;
+  }
+  .editor-fields label { display: flex; flex-direction: column; gap: 5px; font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 12px; }
+  .editor-fields .input { width: 100%; }
+  .field-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .field-row label { flex: 1; min-width: 140px; }
+  .field-checks { display: flex; gap: 22px; font-size: 0.88rem; margin-bottom: 8px; }
+  .field-checks label { display: flex; align-items: center; gap: 6px; }
+
+  .editor-toolbar { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .editor-toolbar button {
+    padding: 5px 10px; font-size: 0.78rem; border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg-card); color: var(--text-secondary); cursor: pointer;
+  }
+  .editor-toolbar button:hover { border-color: var(--accent); color: var(--accent); }
+  .toolbar-spring { flex: 1; }
+
+  .editor-split { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  #f-body {
+    min-height: 420px; padding: 14px; border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--bg-card); color: var(--text); font-family: var(--font-mono); font-size: 0.85rem; line-height: 1.7;
+    resize: vertical;
+  }
+  .preview {
+    padding: 14px; border: 1px dashed var(--border); border-radius: var(--radius);
+    font-size: 0.9rem; overflow-y: auto; max-height: 520px; background: var(--bg);
+  }
+  .editor-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+  .editor-actions .muted { margin: 0; font-size: 0.75rem; }
+
+  .btn {
+    padding: 9px 20px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--bg-card); color: var(--text); cursor: pointer; font-size: 0.88rem; font-family: var(--font-sans);
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { color: #fff; filter: brightness(1.08); }
+  .btn-danger { background: #c0392b; border-color: #c0392b; color: #fff; }
+  .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+  .muted { color: var(--text-tertiary); font-size: 0.82rem; }
+
+  .post-admin-list .pa-row {
+    display: flex; align-items: center; gap: 12px; padding: 11px 6px;
+    border-bottom: 1px solid var(--border); font-size: 0.9rem;
+  }
+  .pa-row .pa-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pa-row a { color: var(--text); }
+  .pa-row a:hover { color: var(--accent); }
+
+  #collection-list .pa-row { display: flex; align-items: center; gap: 12px; padding: 12px 6px; border-bottom: 1px solid var(--border); }
+
+  .toast {
+    position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+    background: var(--text); color: var(--bg); padding: 10px 22px; border-radius: 999px;
+    font-size: 0.85rem; z-index: 200; box-shadow: 0 8px 24px var(--shadow);
+  }
+  dialog {
+    border: 1px solid var(--border); border-radius: 12px; padding: 26px;
+    background: var(--bg-card); color: var(--text); max-width: 380px;
+  }
+  dialog::backdrop { background: rgba(0,0,0,0.4); }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+
+  @media (max-width: 800px) {
+    .editor-split { grid-template-columns: 1fr; }
+    .preview { display: none; }
+  }
+</style>
+
+<script>
+  import {
+    getToken, setToken, clearToken, verifyToken,
+    getFile, putFile, deleteFile, listDir, AuthError, ApiError,
+  } from '../../utils/gh-client';
+
+  const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
+  const POSTS_DIR = 'src/content/posts';
+  const UPLOADS_DIR = 'public/uploads';
+
+  // ---------- 状态 ----------
+  let allPosts: { path: string; text: string; sha: string; title: string; date: string; draft: boolean; pinned: boolean; series?: string }[] = [];
+  let registry: { name: string; slug: string; description: string }[] = [];
+  let editing: { path: string; sha: string } | null = null;
+  let slugLocked = false;
+
+  // ---------- 通用 UI ----------
+  function toast(msg: string, ms = 2600) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.hidden = false;
+    setTimeout(() => (t.hidden = true), ms);
+  }
+
+  function confirmDialog(text: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const dlg = $('confirm-dialog') as HTMLDialogElement;
+      $('confirm-text').textContent = text;
+      const ok = $('confirm-ok'), cancel = $('confirm-cancel');
+      const done = (v: boolean) => { dlg.close(); ok.onclick = null; cancel.onclick = null; resolve(v); };
+      ok.onclick = () => done(true);
+      cancel.onclick = () => done(false);
+      dlg.showModal();
+    });
+  }
+
+  function handleErr(e: unknown, target: HTMLElement) {
+    target.hidden = false;
+    target.textContent = e instanceof Error ? e.message : '未知错误';
+    if (e instanceof AuthError) {
+      // PRD C4：令牌失效 → 回到门禁，编辑内容保留在表单里
+      clearToken();
+      $('console').hidden = true;
+      $('gate').style.display = 'flex';
+      toast('令牌已失效，请重新输入（表单内容已保留）');
+    }
+  }
+
+  // ---------- 门禁（F10） ----------
+  async function tryLogin(token: string): Promise<boolean> {
+    setToken(token);
+    try {
+      const { login } = await verifyToken();
+      $('gate').style.display = 'none';
+      $('console').hidden = false;
+      $('login-user').textContent = `已登录：${login}`;
+      await bootstrap();
+      return true;
+    } catch (e) {
+      clearToken();
+      throw e;
+    }
+  }
+
+  $('token-submit').addEventListener('click', async () => {
+    const input = $('token-input') as HTMLInputElement;
+    const err = $('gate-error');
+    err.hidden = true;
+    if (!input.value.trim()) { err.hidden = false; err.textContent = '请输入令牌'; return; }
+    try {
+      await tryLogin(input.value.trim());
+      input.value = '';
+    } catch (e) {
+      err.hidden = false;
+      err.textContent = e instanceof Error ? e.message : '验证失败';
+    }
+  });
+
+  // 已有令牌自动重登
+  if (getToken()) {
+    tryLogin(getToken()!).catch(() => {});
+  }
+
+  $('logout').addEventListener('click', () => {
+    clearToken();
+    location.reload();
+  });
+
+  async function bootstrap() {
+    await Promise.all([loadPosts(), loadRegistry()]);
+    renderPostList(allPosts);
+    renderCollections();
+    fillSeriesSelect();
+    fillTagsDatalist();
+  }
+
+  // ---------- frontmatter 解析/序列化 ----------
+  function parseFrontmatter(text: string): Record<string, any> {
+    const m = text.match(/^---\n([\s\S]*?)\n---\n?/);
+    if (!m) return {};
+    const fm: Record<string, any> = {};
+    for (const line of m[1].split('\n')) {
+      const kv = line.match(/^(\w[\w-]*):\s*(.*)$/);
+      if (!kv) continue;
+      let [, k, v] = kv;
+      if (v.startsWith('[')) { fm[k] = v.slice(1, -1).split(',').map((s) => s.trim().replace(/^['"]|['"]$/g, '')).filter(Boolean); }
+      else if (v === 'true' || v === 'false') { fm[k] = v === 'true'; }
+      else { fm[k] = v.replace(/^['"]|['"]$/g, ''); }
+    }
+    return fm;
+  }
+
+  function yamlStr(s: string): string {
+    return /[:#"'\[\]{}]/.test(s) ? `'${s.replace(/'/g, "''")}'` : s;
+  }
+
+  function buildFrontmatter(f: Record<string, any>): string {
+    const lines = ['---', `title: ${yamlStr(f.title)}`, `description: ${yamlStr(f.description)}`, `date: ${f.date}`];
+    if (f.tags?.length) lines.push(`tags: [${f.tags.map(yamlStr).join(', ')}]`);
+    if (f.series) {
+      lines.push(`series: ${yamlStr(f.series)}`, `seriesOrder: ${f.seriesOrder ?? 1}`);
+    }
+    lines.push(`pinned: ${!!f.pinned}`, `draft: ${!!f.draft}`, '---', '');
+    return lines.join('\n');
+  }
+
+  function toAsciiSlug(name: string): string {
+    const cleaned = name.trim().toLowerCase();
+    if (!cleaned) return 'post-' + Date.now().toString(36);
+    if (/^[\x20-\x7e]+$/.test(cleaned)) return cleaned.replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'n-a';
+    // 中文 → hash 短码（后台简易版；与前台 utils/slug.ts 规则一致性由 M3 验收保证：发布前必须手改或确认）
+    let h = 5381;
+    for (let i = 0; i < cleaned.length; i++) h = ((h << 5) + h + cleaned.charCodeAt(i)) | 0;
+    return (h >>> 0).toString(36).slice(0, 8);
+  }
+
+  // ---------- 文章管理（F11） ----------
+  async function loadPosts() {
+    allPosts = [];
+    const files = await listDir(POSTS_DIR);
+    await Promise.all(files.filter((f) => f.name.endsWith('.md')).map(async (f) => {
+      const data = await getFile(f.path);
+      if (!data) return;
+      const fm = parseFrontmatter(data.text);
+      allPosts.push({
+        path: f.path, text: data.text, sha: f.sha,
+        title: fm.title ?? f.name, date: String(fm.date ?? ''), draft: !!fm.draft, pinned: !!fm.pinned, series: fm.series,
+      });
+    }));
+    allPosts.sort((a, b) => (a.date < b.date ? 1 : -1));
+  }
+
+  function renderPostList(list: typeof allPosts) {
+    const box = $('post-list');
+    if (!list.length) { box.innerHTML = '<p class="muted">还没有文章，点右上角新建。</p>'; return; }
+    box.innerHTML = list.map((p) => `
+      <div class="pa-row" data-path="${p.path}">
+        <span class="badge ${p.draft ? 'badge-outline' : ''}">${p.draft ? '草稿' : '已发布'}</span>
+        ${p.pinned ? '<span class="badge">置顶</span>' : ''}
+        ${p.series ? `<span class="badge badge-outline">《${p.series}》</span>` : ''}
+        <a class="pa-title" href="/tech_blog/posts/${p.path.split('/').pop()!.replace(/\.md$/, '')}/" target="_blank" rel="noopener">${p.title}</a>
+        <span class="muted">${p.date.slice(0, 10)}</span>
+        <button class="btn btn-sm" data-act="pin">${p.pinned ? '取消置顶' : '置顶'}</button>
+        <button class="btn btn-sm" data-act="edit">编辑</button>
+        <button class="btn btn-sm btn-danger" data-act="del">删除</button>
+      </div>`).join('');
+  }
+
+  $('post-search').addEventListener('input', (e) => {
+    const q = (e.target as HTMLInputElement).value.trim().toLowerCase();
+    renderPostList(q ? allPosts.filter((p) => p.title.toLowerCase().includes(q)) : allPosts);
+  });
+
+  $('post-list').addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('button[data-act]') as HTMLButtonElement | null;
+    if (!btn) return;
+    const row = btn.closest('.pa-row') as HTMLElement;
+    const path = row.dataset.path!;
+    const post = allPosts.find((p) => p.path === path)!;
+    const act = btn.dataset.act;
+
+    if (act === 'pin') {
+      const fm = parseFrontmatter(post.text);
+      fm.pinned = !post.pinned;
+      const body = post.text.replace(/^---\n[\s\S]*?\n---/, buildFrontmatter(fm));
+      try {
+        await putFile(path, body, `post: ${fm.pinned ? '置顶' : '取消置顶'} ${post.title}`, post.sha);
+        toast('已提交，1~2 分钟后线上生效');
+        await loadPosts(); renderPostList(allPosts);
+      } catch (err) { handleErr(err, $('editor-error')); }
+    } else if (act === 'edit') {
+      openEditor(post);
+    } else if (act === 'del') {
+      if (await confirmDialog(`确定永久删除《${post.title}》？此操作会保留在仓库历史中，但页面将立即移除。`)) {
+        try {
+          await deleteFile(path, post.sha, `post: 删除 ${post.title}`);
+          toast('已删除，1~2 分钟后线上生效');
+          await loadPosts(); renderPostList(allPosts);
+        } catch (err) { handleErr(err, $('editor-error')); }
+      }
+    }
+  });
+
+  // ---------- 编辑器（F12/F13） ----------
+  function fillSeriesSelect() {
+    const sel = $('f-series') as HTMLSelectElement;
+    sel.innerHTML = '<option value="">（不属于合集）</option>' + registry.map((c) => `<option value="${c.name}">${c.name}</option>`).join('');
+  }
+
+  function fillTagsDatalist() {
+    const tags = new Set<string>();
+    allPosts.forEach((p) => { parseFrontmatter(p.text).tags?.forEach((t: string) => tags.add(t)); });
+    ($('tags-datalist') as HTMLDataListElement).innerHTML = [...tags].map((t) => `<option value="${t}">`).join('');
+  }
+
+  function openEditor(post?: (typeof allPosts)[0]) {
+    editing = post ? { path: post.path, sha: post.sha } : null;
+    slugLocked = !!post;
+    const fm = post ? parseFrontmatter(post.text) : {};
+    ($('f-title') as HTMLInputElement).value = fm.title ?? '';
+    ($('f-slug') as HTMLInputElement).value = post ? post.path.split('/').pop()!.replace(/\.md$/, '') : '';
+    ($('f-slug') as HTMLInputElement).disabled = !!post; // PRD C6：发布后 slug 锁定
+    ($('f-desc') as HTMLInputElement).value = fm.description ?? '';
+    ($('f-date') as HTMLInputElement).value = (fm.date ?? new Date().toISOString()).slice(0, 10);
+    ($('f-series') as HTMLSelectElement).value = fm.series ?? '';
+    ($('f-series-order') as HTMLInputElement).value = String(fm.seriesOrder ?? 1);
+    ($('f-tags') as HTMLInputElement).value = (fm.tags ?? []).join(', ');
+    ($('f-pinned') as HTMLInputElement).checked = !!fm.pinned;
+    ($('f-draft') as HTMLInputElement).checked = !!fm.draft;
+    ($('f-body') as HTMLTextAreaElement).value = post ? post.text.replace(/^---\n[\s\S]*?\n---\n?/, '') : '';
+    ($('editor-error') as HTMLElement).hidden = true;
+    switchTab('editor');
+    renderPreview();
+  }
+
+  $('new-post').addEventListener('click', () => openEditor());
+  $('editor-cancel').addEventListener('click', () => switchTab('posts'));
+
+  // localStorage 30s 自动暂存（PRD C3）
+  setInterval(() => {
+    const title = ($('f-title') as HTMLInputElement).value;
+    const body = ($('f-body') as HTMLTextAreaElement).value;
+    if (!title && !body) return;
+    localStorage.setItem('lzw_editor_draft', JSON.stringify({ title, body, at: Date.now() }));
+    $('autosave-hint').textContent = `已暂存 ${new Date().toLocaleTimeString('zh-CN')}`;
+  }, 30000);
+
+  function restoreAutosave() {
+    const raw = localStorage.getItem('lzw_editor_draft');
+    if (!raw) return;
+    try {
+      const d = JSON.parse(raw);
+      if (Date.now() - d.at > 86400_000) return;
+      if (!($('f-title') as HTMLInputElement).value && confirm(`发现 ${new Date(d.at).toLocaleString('zh-CN')} 的未保存草稿《${d.title || '无标题'}》，是否恢复？`)) {
+        ($('f-title') as HTMLInputElement).value = d.title;
+        ($('f-body') as HTMLTextAreaElement).value = d.body;
+      }
+    } catch {}
+  }
+
+  // 工具栏（含图片/附件按钮，PRD A2）
+  $('editor-toolbar').addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('button[data-md]') as HTMLButtonElement | null;
+    if (!btn) return;
+    const ta = $('f-body') as HTMLTextAreaElement;
+    const { selectionStart: s, selectionEnd: t, value: v } = ta;
+    const sel = v.slice(s, t) || '';
+    const wrap = (before: string, after = before) => { ta.value = v.slice(0, s) + before + sel + after + v.slice(t); };
+    const insert = (text: string) => { ta.value = v.slice(0, s) + text + v.slice(t); };
+    switch (btn.dataset.md) {
+      case 'h2': insert(`\n## ${sel || '标题'}\n`); break;
+      case 'h3': insert(`\n### ${sel || '小标题'}\n`); break;
+      case 'bold': wrap('**'); break;
+      case 'italic': wrap('*'); break;
+      case 'quote': insert(`> ${sel}`); break;
+      case 'code': insert('```\n' + (sel || 'code') + '\n```'); break;
+      case 'table': insert('\n| 列A | 列B |\n| --- | --- |\n| 内容 | 内容 |\n'); break;
+      case 'link': insert(`[${sel || '链接文字'}](https://)`); break;
+      case 'footnote': insert(`[^1]`); break;
+      case 'image': ($('hidden-picker-image') as HTMLInputElement).click(); break;
+      case 'attach': ($('hidden-picker-file') as HTMLInputElement).click(); break;
+    }
+    ta.dispatchEvent(new Event('input'));
+  });
+
+  $('hidden-picker-image').addEventListener('change', (e) => uploadFiles((e.target as HTMLInputElement).files!, true));
+  $('hidden-picker-file').addEventListener('change', (e) => uploadFiles((e.target as HTMLInputElement).files!, false));
+  $('file-picker').addEventListener('change', (e) => uploadFiles((e.target as HTMLInputElement).files!, null));
+
+  // 拖拽/粘贴上传
+  const ta = $('f-body') as HTMLTextAreaElement;
+  ta.addEventListener('dragover', (e) => e.preventDefault());
+  ta.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (e.dataTransfer?.files.length) uploadFiles(e.dataTransfer.files, null);
+  });
+  ta.addEventListener('paste', (e) => {
+    const files = [...(e.clipboardData?.items ?? [])].filter((i) => i.kind === 'file').map((i) => i.getAsFile()!);
+    if (files.length) { e.preventDefault(); uploadFiles(files as File[], true); }
+  });
+
+  // 图片压缩（>500KB canvas 有损压缩，PRD 自查①已确认）
+  async function compressImage(file: File): Promise<Blob> {
+    if (file.size <= 500 * 1024) return file;
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement('canvas');
+    const scale = Math.min(1, 1920 / bitmap.width);
+    canvas.width = bitmap.width * scale;
+    canvas.height = bitmap.height * scale;
+    canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    return new Promise((resolve) => canvas.toBlob((b) => resolve(b ?? file), 'image/jpeg', 0.82));
+  }
+
+  // 上传（PRD F13：40MB 上限、同名加时间戳、附件链接插入）
+  async function uploadFiles(files: File[], isImage: boolean | null) {
+    for (const f of files) {
+      if (f.size > 40 * 1024 * 1024) { toast(`「${f.name}」超过 40MB 上限，已跳过`); continue; }
+      const img = isImage ?? f.type.startsWith('image/');
+      const blob = img ? await compressImage(f) : f;
+      const year = new Date().getFullYear();
+      const stamp = Date.now().toString(36).slice(-4);
+      const dot = f.name.lastIndexOf('.');
+      const base = (dot > 0 ? f.name.slice(0, dot) : f.name).replace(/[^\w\u4e00-\u9fff-]+/g, '-').slice(0, 40);
+      const ext = dot > 0 ? f.name.slice(dot) : '';
+      const path = `${UPLOADS_DIR}/${year}/${base}-${stamp}${ext}`;
+      const buf = await blob.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+      const token = getToken()!;
+      try {
+        const res = await fetch(`https://api.github.com/repos/zwl8620/tech_blog/contents/${encodeURIComponent(path)}`, {
+          method: 'PUT',
+          headers: { Authorization: `Bearer ${token}`, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: `upload: ${path.split('/').pop()}`, content: base64 }),
+        });
+        if (!res.ok) throw new Error(res.status === 401 ? '令牌失效' : `上传失败（${res.status}）`);
+        const url = `/tech_blog/uploads/${year}/${base}-${stamp}${ext}`;
+        const md = img ? `![${base}](${url})` : `[${f.name}](${url})`;
+        const t = ta;
+        const s = t.selectionStart;
+        t.value = t.value.slice(0, s) + md + t.value.slice(t.selectionEnd);
+        t.dispatchEvent(new Event('input'));
+        toast(`已上传 ${path.split('/').pop()}`);
+      } catch (err) {
+        handleErr(err, $('editor-error'));
+      }
+    }
+  }
+
+  // 简易预览
+  function renderPreview() {
+    const md = ($('f-body') as HTMLTextAreaElement).value;
+    const esc = md.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    $('f-preview').innerHTML = esc
+      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
+      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
+      .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2" loading="lazy" />')
+      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
+      .replace(/\n\n/g, '<br/><br/>');
+  }
+  ta.addEventListener('input', renderPreview);
+
+  // 保存（F12）：slug 锁定校验 + 提交
+  $('editor-save').addEventListener('click', async () => {
+    const err = $('editor-error');
+    err.hidden = true;
+    const title = ($('f-title') as HTMLInputElement).value.trim();
+    const slugInput = ($('f-slug') as HTMLInputElement).value.trim();
+    if (!title) { err.hidden = false; err.textContent = '标题必填'; return; }
+    let slug = slugInput;
+    if (!editing) {
+      slug = slug || toAsciiSlug(title);
+      if (!/^[\x21-\x7e]+$/.test(slug)) { err.hidden = false; err.textContent = 'slug 必须是 ASCII 字符（建议英文/拼音/短码）'; return; }
+    }
+    const series = ($('f-series') as HTMLSelectElement).value;
+    const fm = {
+      title,
+      description: ($('f-desc') as HTMLInputElement).value.trim() || title,
+      date: ($('f-date') as HTMLInputElement).value || new Date().toISOString().slice(0, 10),
+      tags: ($('f-tags') as HTMLInputElement).value.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
+      series: series || undefined,
+      seriesOrder: series ? Number(($('f-series-order') as HTMLInputElement).value) || 1 : undefined,
+      pinned: ($('f-pinned') as HTMLInputElement).checked,
+      draft: ($('f-draft') as HTMLInputElement).checked,
+    };
+    const content = buildFrontmatter(fm) + '\n' + ($('f-body') as HTMLTextAreaElement).value;
+    const path = editing ? editing.path : `${POSTS_DIR}/${slug}.md`;
+    try {
+      await putFile(path, content, `post: ${editing ? '更新' : '新建'} ${title}`, editing?.sha);
+      localStorage.removeItem('lzw_editor_draft');
+      toast('已提交，1~2 分钟后线上生效');
+      await loadPosts(); fillTagsDatalist();
+      switchTab('posts');
+    } catch (e) { handleErr(e, err); }
+  });
+
+  // ---------- 合集管理（F18） ----------
+  async function loadRegistry() {
+    const data = await getFile('src/data/collections.json');
+    registry = data ? JSON.parse(data.text) : [];
+  }
+
+  function renderCollections() {
+    const box = $('collection-list');
+    box.innerHTML = registry.map((c, i) => `
+      <div class="pa-row" data-idx="${i}">
+        <strong>${c.name}</strong>
+        <span class="badge badge-outline">${c.slug}</span>
+        <span class="muted" style="flex:1">${c.description}</span>
+        <button class="btn btn-sm" data-act="rename">改名</button>
+        <button class="btn btn-sm" data-act="desc">描述</button>
+        <button class="btn btn-sm btn-danger" data-act="del">删除</button>
+      </div>`).join('') || '<p class="muted">还没有合集。</p>';
+  }
+
+  $('new-collection').addEventListener('click', async () => {
+    const name = prompt('合集名称（可中文）：'); if (!name) return;
+    let slug = prompt('ASCII slug（URL 用）：', toAsciiSlug(name)); if (!slug) return;
+    if (!/^[\x21-\x7e]+$/.test(slug)) { toast('slug 必须是 ASCII'); return; }
+    const description = prompt('一句话描述：') ?? '';
+    registry.push({ name, slug, description });
+    await saveRegistry(`collection: 新建 ${name}`);
+  });
+
+  $('collection-list').addEventListener('click', async (e) => {
+    const btn = (e.target as HTMLElement).closest('button[data-act]') as HTMLButtonElement | null;
+    if (!btn) return;
+    const idx = Number(btn.closest('.pa-row')!.dataset.idx);
+    const c = registry[idx];
+    if (btn.dataset.act === 'rename') {
+      const name = prompt('新名称：', c.name); if (!name) return;
+      const oldName = c.name;
+      c.name = name;
+      // 同步成员文章 frontmatter（PRD F18）
+      for (const p of allPosts.filter((p) => p.series === oldName)) {
+        const fm = parseFrontmatter(p.text);
+        fm.series = name;
+        await putFile(p.path, p.text.replace(/^---\n[\s\S]*?\n---/, buildFrontmatter(fm)), `collection: 重命名 ${oldName} → ${name}（同步 ${p.title}）`, p.sha);
+      }
+      await saveRegistry(`collection: 重命名 ${oldName} → ${name}`);
+    } else if (btn.dataset.act === 'desc') {
+      const description = prompt('一句话描述：', c.description) ?? c.description;
+      c.description = description;
+      await saveRegistry(`collection: 更新描述 ${c.name}`);
+    } else if (btn.dataset.act === 'del') {
+      if (await confirmDialog(`删除合集《${c.name}》？成员文章会保留并解除归属。`)) {
+        registry.splice(idx, 1);
+        for (const p of allPosts.filter((p) => p.series === c.name)) {
+          const fm = parseFrontmatter(p.text);
+          delete fm.series; delete fm.seriesOrder;
+          await putFile(p.path, p.text.replace(/^---\n[\s\S]*?\n---/, buildFrontmatter(fm)), `collection: 解除 ${p.title} 与《${c.name}》的归属`, p.sha);
+        }
+        await saveRegistry(`collection: 删除 ${c.name}`);
+      }
+    }
+  });
+
+  async function saveRegistry(message: string) {
+    try {
+      const data = await getFile('src/data/collections.json');
+      await putFile('src/data/collections.json', JSON.stringify(registry, null, 2) + '\n', message, data?.sha);
+      toast('已提交，1~2 分钟后线上生效');
+      await loadPosts(); renderCollections(); fillSeriesSelect();
+    } catch (e) { handleErr(e, $('editor-error')); }
+  }
+
+  // ---------- Tabs ----------
+  function switchTab(name: string) {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', (t as HTMLElement).dataset.tab === name));
+    ['posts', 'editor', 'collections'].forEach((n) => ($(`tab-${n}`) as HTMLElement).hidden = n !== name);
+  }
+  document.querySelectorAll('.tab').forEach((t) =>
+    t.addEventListener('click', () => switchTab((t as HTMLElement).dataset.tab!))
+  );
+
+  // 启动时尝试恢复暂存
+  setTimeout(restoreAutosave, 800);
+</script>

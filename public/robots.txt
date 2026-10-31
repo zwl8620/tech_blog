@@ -1,0 +1,4 @@
+# 站点地图与 RSS 中不含任何后台路径（PRD §2.2：robots 不写后台路径，避免广播隐藏位置）
+User-agent: *
+Allow: /
+Sitemap: https://zwl8620.github.io/tech_blog/sitemap-index.xml

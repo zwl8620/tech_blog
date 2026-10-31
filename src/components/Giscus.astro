@@ -1,0 +1,81 @@
+---
+// giscus 评论组件（PRD F19）：懒加载 + 主题跟随 + enabled 兜底
+import { GISCUS } from '../config';
+
+const enabled = GISCUS.enabled && GISCUS.repoId && GISCUS.categoryId;
+---
+
+{
+  enabled && (
+    <section class="giscus-wrap" id="giscus-wrap" aria-label="评论区">
+      <p class="giscus-tip">评论前需使用 GitHub 账号登录 · 评论数据存于仓库 Discussions</p>
+      <div id="giscus-container" />
+      <script is:inline define:vars={{ GISCUS }}>
+        // IntersectionObserver 懒加载（PRD F19）：滚动到评论区才加载脚本
+        const wrap = document.getElementById('giscus-wrap');
+        const container = document.getElementById('giscus-container');
+        let loaded = false;
+
+        function themeName() {
+          return document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+        }
+
+        function mountGiscus() {
+          if (loaded) return;
+          loaded = true;
+          const s = document.createElement('script');
+          s.src = 'https://giscus.app/client.js';
+          s.async = true;
+          s.crossOrigin = 'anonymous';
+          Object.entries({
+            'data-repo': GISCUS.repo,
+            'data-repo-id': GISCUS.repoId,
+            'data-category': GISCUS.category,
+            'data-category-id': GISCUS.categoryId,
+            'data-mapping': GISCUS.mapping,
+            'data-strict': '1',
+            'data-reactions-enabled': GISCUS.reactionsEnabled,
+            'data-emit-metadata': '0',
+            'data-input-position': GISCUS.inputPosition,
+            'data-theme': themeName(),
+            'data-lang': GISCUS.lang,
+          }).forEach(([k, v]) => s.setAttribute(k, v));
+          container.appendChild(s);
+        }
+
+        const io = new IntersectionObserver(
+          (entries) => {
+            if (entries[0].isIntersecting) {
+              mountGiscus();
+              io.disconnect();
+            }
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(wrap);
+
+        // 主题跟随：监听 html 属性变化，通知 giscus 切换
+        new MutationObserver(() => {
+          const iframe = document.querySelector('iframe.giscus-frame');
+          iframe?.contentWindow?.postMessage(
+            { giscus: { setConfig: { theme: themeName() } } },
+            'https://giscus.app'
+          );
+        }).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+      </script>
+    </section>
+  )
+}
+
+<style>
+  .giscus-wrap {
+    margin-top: 56px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border);
+  }
+  .giscus-tip {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    margin-bottom: 20px;
+  }
+</style>

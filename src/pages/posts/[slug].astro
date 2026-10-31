@@ -1,0 +1,154 @@
+---
+// 文章详情（PRD F3）：TOC + 尾部导航互斥 + giscus + 日期 YYYY-MM-DD
+import { getCollection, render } from 'astro:content';
+import { getPublishedPosts, getFooterNav } from '../../utils/content';
+import { formatDate, readingTime } from '../../utils/slug';
+import BaseLayout from '../../layouts/Base.astro';
+import Toc from '../../components/Toc.astro';
+import SeriesBox from '../../components/SeriesBox.astro';
+import Giscus from '../../components/Giscus.astro';
+
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts();
+  return posts.map((post) => ({ params: { slug: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const all = await getPublishedPosts();
+const nav = getFooterNav(post, all);
+
+const { Content, headings } = await render(post);
+---
+
+<BaseLayout title={post.data.title} description={post.data.description}>
+  <div class="post-layout">
+    <article class="post fade-up">
+      <header class="post-header">
+        <h1 class="post-title">{post.data.title}</h1>
+        <div class="post-meta">
+          <time datetime={post.data.date.toISOString()}>{formatDate(post.data.date)}</time>
+          <span class="dot">·</span>
+          <span>{readingTime(post.body ?? '')}</span>
+          {
+            post.data.series && (
+              <>
+                <span class="dot">·</span>
+                <span>合集《{post.data.series}》</span>
+              </>
+            )
+          }
+        </div>
+        {
+          post.data.tags.length > 0 && (
+            <div class="post-tags">
+              {post.data.tags.map((t) => (
+                <a class="badge badge-outline" href={`/tech_blog/tags/${encodeURIComponent(t)}/`}>{t}</a>
+              ))}
+            </div>
+          )
+        }
+      </header>
+
+      <div class="post-content">
+        <Content />
+      </div>
+
+      <SeriesBox nav={nav} />
+      <Giscus />
+    </article>
+
+    <Toc headings={headings} />
+  </div>
+</BaseLayout>
+
+<style>
+  .post-layout {
+    position: relative;
+  }
+  .post {
+    max-width: 720px;
+  }
+  .post-header {
+    margin-bottom: 36px;
+  }
+  .post-title {
+    font-size: 2rem;
+    margin: 0 0 10px;
+    line-height: 1.35;
+  }
+  .post-meta {
+    font-size: 0.85rem;
+    color: var(--text-tertiary);
+  }
+  .post-meta .dot {
+    margin: 0 8px;
+  }
+  .post-tags {
+    margin-top: 12px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  /* ---------- Markdown 正文排版 ---------- */
+  .post-content {
+    font-size: 1rem;
+  }
+  .post-content :global(h2) {
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .post-content :global(blockquote) {
+    margin: 1.4em 0;
+    padding: 4px 18px;
+    border-left: 3px solid var(--accent);
+    background: var(--bg-card);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    color: var(--text-secondary);
+  }
+  .post-content :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+    margin: 1.4em 0;
+  }
+  .post-content :global(th),
+  .post-content :global(td) {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .post-content :global(th) {
+    background: var(--bg-code);
+  }
+  .post-content :global(code:not(pre code)) {
+    background: var(--bg-code);
+    padding: 2px 6px;
+    border-radius: 5px;
+    font-size: 0.85em;
+    font-family: var(--font-mono);
+    color: var(--accent);
+  }
+  .post-content :global(hr) {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 2.4em 0;
+  }
+  .post-content :global(.footnotes) {
+    margin-top: 3em;
+    padding-top: 1em;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  /* ---------- 布局：宽屏右侧 TOC ---------- */
+  @media (min-width: 1081px) {
+    .post-layout {
+      display: grid;
+      grid-template-columns: 720px 1fr;
+      gap: 48px;
+      justify-content: center;
+    }
+  }
+</style>

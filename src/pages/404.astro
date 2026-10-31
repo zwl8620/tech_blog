@@ -1,0 +1,64 @@
+---
+// 404（PRD F9）：返回首页 + 搜索引导
+import BaseLayout from '../layouts/Base.astro';
+---
+
+<BaseLayout title="页面不存在" noindex>
+  <div class="nf fade-up">
+    <p class="nf-code">404</p>
+    <h1 class="nf-title">这一页不存在</h1>
+    <p class="nf-desc">可能链接已失效，或者页面被移动了。</p>
+    <div class="nf-actions">
+      <a href="/tech_blog/" class="btn">返回首页</a>
+      <button class="btn" id="nf-search">按下 ⌘K 搜索</button>
+    </div>
+  </div>
+</BaseLayout>
+
+<style>
+  .nf {
+    text-align: center;
+    padding: 80px 0;
+  }
+  .nf-code {
+    font-family: var(--font-mono);
+    font-size: 4.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0;
+    opacity: 0.85;
+  }
+  .nf-title {
+    font-size: 1.4rem;
+    margin: 8px 0 10px;
+  }
+  .nf-desc {
+    color: var(--text-secondary);
+  }
+  .nf-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 26px;
+  }
+  .btn {
+    padding: 9px 22px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--text);
+    font-size: 0.9rem;
+    cursor: pointer;
+    font-family: var(--font-sans);
+  }
+  .btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+</style>
+
+<script>
+  document.getElementById('nf-search')?.addEventListener('click', () => {
+    document.getElementById('search-trigger')?.click();
+  });
+</script>

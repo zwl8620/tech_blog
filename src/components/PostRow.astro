@@ -1,0 +1,119 @@
+---
+// 文章列表条目（v2 布局，2026-10-24 志伟反馈）：
+// 标题独占一行 → 摘要在下 → 底部 meta 行（左：标签+时长；右：日期 YYYY-MM-DD）
+import type { CollectionEntry } from 'astro:content';
+import { formatDate, readingTime } from '../utils/slug';
+
+interface Props {
+  post: CollectionEntry<'posts'>;
+  pinned?: boolean;
+}
+const { post, pinned = false } = Astro.props;
+---
+
+<article class="post-row">
+  <a href={`/tech_blog/posts/${post.id}/`} class="post-row-link">
+    <h3 class="post-row-title">
+      {pinned && <span class="badge pin-badge">置顶</span>}
+      {post.data.title}
+    </h3>
+
+    <p class="post-row-desc">{post.data.description}</p>
+
+    <div class="post-row-meta">
+      <div class="meta-left">
+        {
+          post.data.tags.map((t) => (
+            <span class="badge badge-outline">{t}</span>
+          ))
+        }
+        <span class="reading-time">{readingTime(post.body ?? '')}</span>
+      </div>
+      <time class="post-date" datetime={post.data.date.toISOString()}>
+        {formatDate(post.data.date)}
+      </time>
+    </div>
+  </a>
+</article>
+
+<style>
+  .post-row {
+    border-bottom: 1px solid var(--border);
+  }
+  .post-row:last-child {
+    border-bottom: none;
+  }
+  .post-row-link {
+    display: block;
+    padding: 20px 8px;
+    color: inherit;
+    border-radius: var(--radius);
+    transition: background 0.15s ease;
+  }
+  .post-row-link:hover {
+    background: var(--bg-card);
+  }
+  .post-row-link:hover .post-row-title {
+    color: var(--accent);
+  }
+
+  /* 标题独占一行，自然换行 */
+  .post-row-title {
+    margin: 0;
+    font-size: 1.08rem;
+    line-height: 1.5;
+    transition: color 0.15s;
+    overflow-wrap: anywhere;
+  }
+  .pin-badge {
+    margin-right: 8px;
+    font-size: 0.68rem;
+    vertical-align: 2px;
+  }
+
+  /* 摘要在标题正下方 */
+  .post-row-desc {
+    margin: 8px 0 12px;
+    font-size: 0.88rem;
+    line-height: 1.7;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  /* meta 行：左标签+时长，右日期 */
+  .post-row-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .meta-left {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    min-width: 0;
+  }
+  .reading-time {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    white-space: nowrap;
+  }
+  .post-date {
+    font-size: 0.78rem;
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+    white-space: nowrap;
+    margin-left: auto;
+  }
+
+  @media (max-width: 480px) {
+    .post-row-link {
+      padding: 16px 4px;
+    }
+  }
+</style>

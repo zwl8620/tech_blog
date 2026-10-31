@@ -1,0 +1,115 @@
+---
+// 合集书架（PRD F17）：书架式卡片 + 空合集"待更新"
+import { getCollections } from '../../utils/content';
+import { formatDate } from '../../utils/slug';
+import BaseLayout from '../../layouts/Base.astro';
+
+const collections = await getCollections();
+---
+
+<BaseLayout title="合集" description="全部合集书架">
+  <h1 class="page-title fade-up">合集书架</h1>
+  <p class="page-desc fade-up">把同一线索的文章装订成卷，共 {collections.length} 卷</p>
+
+  <div class="shelf fade-up">
+    {
+      collections.map((c) => (
+        <a href={`/tech_blog/collections/${c.slug}/`} class="book card">
+          <div class="book-spine-wrap">
+            <span class="book-spine" aria-hidden="true" />
+          </div>
+          <div class="book-body">
+            <h2 class="book-title">{c.name}</h2>
+            <p class="book-desc">{c.description}</p>
+            <p class="book-meta">
+              {c.postCount > 0 ? (
+                <>
+                  {c.postCount} 篇
+                  {c.lastUpdated && <> · 更新于 {formatDate(c.lastUpdated)}</>}
+                </>
+              ) : (
+                <span class="pending">待更新</span>
+              )}
+            </p>
+          </div>
+        </a>
+      ))
+    }
+  </div>
+
+  {
+    collections.length === 0 && (
+      <p class="empty">还没有合集。文章 frontmatter 里写 series 字段即可自动归卷。</p>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .page-title {
+    margin-bottom: 4px;
+  }
+  .page-desc {
+    color: var(--text-tertiary);
+    font-size: 0.85rem;
+    margin-top: 0;
+  }
+  .shelf {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 18px;
+    margin-top: 26px;
+  }
+  .book {
+    display: flex;
+    gap: 16px;
+    color: inherit;
+    min-height: 140px;
+  }
+  .book:hover {
+    border-color: var(--accent);
+    transform: translateY(-3px);
+  }
+  .book-spine-wrap {
+    flex-shrink: 0;
+  }
+  .book-spine {
+    display: block;
+    width: 10px;
+    height: 100%;
+    min-height: 110px;
+    border-radius: 5px;
+    background: linear-gradient(to bottom, var(--accent), color-mix(in srgb, var(--accent) 55%, transparent));
+  }
+  .book-body {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+  .book-title {
+    margin: 0;
+    font-size: 1.05rem;
+  }
+  .book-desc {
+    margin: 0;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .book-meta {
+    margin: auto 0 0;
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+  }
+  .pending {
+    color: var(--accent);
+  }
+  .empty {
+    margin-top: 40px;
+    text-align: center;
+    color: var(--text-tertiary);
+  }
+</style>
